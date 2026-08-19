@@ -47,36 +47,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String jwt = authHeader.substring(7);
 
-            String userId = jwtService.extractUserId(jwt);
+            try {
 
-            System.out.println("USER ID FROM TOKEN: " + userId);
+                String userId = jwtService.extractUserId(jwt);
 
-            User user = userRepository.findById(UUID.fromString(userId))
-                    .orElse(null);
+                System.out.println("USER ID FROM TOKEN: " + userId);
 
-            System.out.println("USER FOUND: " + (user != null));
+                User user = userRepository.findById(UUID.fromString(userId))
+                        .orElse(null);
 
-            if (user != null && jwtService.isTokenValid(jwt, user)) {
+                System.out.println("USER FOUND: " + (user != null));
 
-                System.out.println("JWT VALID");
+                if (user != null && jwtService.isTokenValid(jwt, user)) {
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                user,
-                                null,
-                                Collections.emptyList()
-                        );
+                    System.out.println("JWT VALID");
 
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    user,
+                                    null,
+                                    Collections.emptyList()
+                            );
 
-                System.out.println("AUTHENTICATION SET");
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authentication);
+
+                    System.out.println("AUTHENTICATION SET");
+                }
+
+            } catch (Exception ex) {
+
+                SecurityContextHolder.clearContext();
+
+                System.out.println("INVALID JWT");
             }
         }
-
-        filterChain.doFilter(request, response);
-
         filterChain.doFilter(request, response);
     }
 
