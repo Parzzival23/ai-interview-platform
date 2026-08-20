@@ -11,6 +11,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -37,13 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        System.out.println("JWT FILTER RUNNING");
-
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-
-            System.out.println("BEARER TOKEN FOUND");
 
             String jwt = authHeader.substring(7);
 
@@ -51,36 +48,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 String userId = jwtService.extractUserId(jwt);
 
-                System.out.println("USER ID FROM TOKEN: " + userId);
-
                 User user = userRepository.findById(UUID.fromString(userId))
                         .orElse(null);
 
-                System.out.println("USER FOUND: " + (user != null));
-
                 if (user != null && jwtService.isTokenValid(jwt, user)) {
-
-                    System.out.println("JWT VALID");
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     user,
                                     null,
-                                    Collections.emptyList()
+                                    Collections.singletonList(
+                                            new SimpleGrantedAuthority(
+                                                    "ROLE_" + user.getRole().name()
+                                            )
+                                    )
                             );
 
                     SecurityContextHolder
                             .getContext()
                             .setAuthentication(authentication);
-
-                    System.out.println("AUTHENTICATION SET");
                 }
 
             } catch (Exception ex) {
 
                 SecurityContextHolder.clearContext();
-
-                System.out.println("INVALID JWT");
             }
         }
         filterChain.doFilter(request, response);

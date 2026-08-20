@@ -7,6 +7,7 @@ import com.aiinterviewplatform.backend.repository.UserRepository;
 import com.aiinterviewplatform.backend.dto.RegisterRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.aiinterviewplatform.backend.entity.Role;
 
 @Service
 public class AuthService {
@@ -28,7 +29,8 @@ public class AuthService {
         User user = new User(
                 request.name(),    // "Akshat"
                 request.email(),   // "akshat@example.com"
-                hashedPassword
+                hashedPassword,
+                Role.USER
         );
         userRepository.save(user);
     }
