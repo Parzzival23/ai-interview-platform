@@ -95,4 +95,13 @@ public class Interview {
     public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
     }
+
+
+
+    public Interview(User user, String topic, Difficulty difficulty) {
+        this.user = user;
+        this.topic = topic;
+        this.difficulty = difficulty;
+        this.status = InterviewStatus.NOT_STARTED;
+    }
 }
