@@ -24,4 +24,21 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ex.getMessage());
     }
+    @ExceptionHandler(InterviewNotFoundException.class)
+    public ResponseEntity<String> handleInterviewNotFound(
+            InterviewNotFoundException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ex.getMessage());
+    }
+    @ExceptionHandler(InterviewAlreadyStartedException.class)
+    public ResponseEntity<String> handleInterviewAlreadyStarted(
+            InterviewAlreadyStartedException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ex.getMessage());
+    }
+
 }

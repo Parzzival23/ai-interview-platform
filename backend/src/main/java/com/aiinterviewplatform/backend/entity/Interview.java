@@ -33,6 +33,11 @@ public class Interview {
     @Column(nullable = false)
     private Instant createdAt;
 
+    public void start() {
+        this.status = InterviewStatus.IN_PROGRESS;
+        this.startedAt = Instant.now();
+    }
+
     private Instant startedAt;
 
     private Instant completedAt;
