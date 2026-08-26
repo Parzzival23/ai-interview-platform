@@ -40,5 +40,21 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(ex.getMessage());
     }
+    @ExceptionHandler(QuestionNotFoundException.class)
+    public ResponseEntity<String> handleQuestionNotFound(
+            QuestionNotFoundException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ex.getMessage());
+    }
+    @ExceptionHandler(AnswerAlreadySubmittedException.class)
+    public ResponseEntity<String> handleAnswerAlreadySubmitted(
+            AnswerAlreadySubmittedException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ex.getMessage());
+    }
 
 }

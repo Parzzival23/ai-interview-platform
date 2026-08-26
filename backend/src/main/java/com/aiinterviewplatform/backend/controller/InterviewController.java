@@ -3,6 +3,7 @@ package com.aiinterviewplatform.backend.controller;
 import com.aiinterviewplatform.backend.dto.CreateInterviewRequest;
 import com.aiinterviewplatform.backend.dto.InterviewQuestionResponse;
 import com.aiinterviewplatform.backend.dto.InterviewResponse;
+import com.aiinterviewplatform.backend.dto.SubmitAnswerRequest;
 import com.aiinterviewplatform.backend.entity.User;
 import com.aiinterviewplatform.backend.service.InterviewService;
 import jakarta.validation.Valid;
@@ -59,5 +60,21 @@ public class InterviewController {
         User user = (User) authentication.getPrincipal();
 
         return interviewService.getInterviewQuestions(id, user);
+    }
+    @PostMapping("/{interviewId}/questions/{questionId}/answer")
+    public void submitAnswer(
+            @PathVariable UUID interviewId,
+            @PathVariable UUID questionId,
+            @Valid @RequestBody SubmitAnswerRequest request,
+            Authentication authentication) {
+
+        User user = (User) authentication.getPrincipal();
+
+        interviewService.submitAnswer(
+                interviewId,
+                questionId,
+                request,
+                user
+        );
     }
 }
