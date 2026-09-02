@@ -57,4 +57,21 @@ public class GlobalExceptionHandler {
                 .body(ex.getMessage());
     }
 
+    @ExceptionHandler(AnswerNotFoundException.class)
+    public ResponseEntity<String> handleAnswerNotFound(
+            AnswerNotFoundException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ex.getMessage());
+    }
+    @ExceptionHandler(InterviewNotInProgressException.class)
+    public ResponseEntity<String> handleInterviewNotInProgress(
+            InterviewNotInProgressException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ex.getMessage());
+    }
+
 }

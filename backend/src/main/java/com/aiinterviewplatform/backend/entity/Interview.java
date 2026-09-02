@@ -37,6 +37,10 @@ public class Interview {
         this.status = InterviewStatus.IN_PROGRESS;
         this.startedAt = Instant.now();
     }
+    public void complete() {
+        this.status = InterviewStatus.COMPLETED;
+        this.completedAt = Instant.now();
+    }
 
     private Instant startedAt;
 

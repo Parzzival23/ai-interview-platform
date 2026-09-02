@@ -1,17 +1,12 @@
 package com.aiinterviewplatform.backend.service;
 
-import com.aiinterviewplatform.backend.dto.CreateInterviewRequest;
-import com.aiinterviewplatform.backend.dto.InterviewQuestionResponse;
-import com.aiinterviewplatform.backend.dto.InterviewResponse;
-import com.aiinterviewplatform.backend.dto.SubmitAnswerRequest;
+import com.aiinterviewplatform.backend.dto.*;
 import com.aiinterviewplatform.backend.entity.*;
-import com.aiinterviewplatform.backend.exception.AnswerAlreadySubmittedException;
-import com.aiinterviewplatform.backend.exception.InterviewAlreadyStartedException;
-import com.aiinterviewplatform.backend.exception.InterviewNotFoundException;
-import com.aiinterviewplatform.backend.exception.QuestionNotFoundException;
+import com.aiinterviewplatform.backend.exception.*;
 import com.aiinterviewplatform.backend.repository.AnswerRepository;
 import com.aiinterviewplatform.backend.repository.InterviewQuestionRepository;
 import com.aiinterviewplatform.backend.repository.InterviewRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -165,5 +160,61 @@ public class InterviewService {
         answer.setTimeTaken(request.timeTaken());
 
         answerRepository.save(answer);
+    }
+
+    @Transactional
+    public void evaluateAnswer(
+            UUID interviewId,
+            UUID questionId,
+            EvaluateAnswerRequest request,
+            User user) {
+        Interview interview = interviewRepository
+                .findByIdAndUser(interviewId, user)
+                .orElseThrow(() ->
+                        new InterviewNotFoundException("Interview not found"));
+
+        InterviewQuestion question = interviewQuestionRepository
+                .findById(questionId)
+                .orElseThrow(() ->
+                        new QuestionNotFoundException("Question not found"));
+
+        if (!question.getInterview().getId().equals(interview.getId())) {
+            throw new InterviewNotFoundException("Question not found");
+        }
+
+        Answer answer = answerRepository
+                .findByQuestion(question)
+                .orElseThrow(() ->
+                        new AnswerNotFoundException("Answer not found"));
+
+        answer.setScore(request.score());
+        answer.setFeedback(request.feedback());
+
+        answerRepository.save(answer);
+    }
+    public InterviewResponse completeInterview(UUID interviewId, User user) {
+
+        Interview interview = interviewRepository
+                .findByIdAndUser(interviewId, user)
+                .orElseThrow(() ->
+                        new InterviewNotFoundException("Interview not found"));
+
+        if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
+            throw new InterviewNotInProgressException("Interview is not in progress");
+        }
+
+        interview.complete();
+
+        Interview savedInterview = interviewRepository.save(interview);
+
+        return new InterviewResponse(
+                savedInterview.getId(),
+                savedInterview.getTopic(),
+                savedInterview.getDifficulty(),
+                savedInterview.getStatus(),
+                savedInterview.getCreatedAt(),
+                savedInterview.getStartedAt(),
+                savedInterview.getCompletedAt()
+        );
     }
 }
