@@ -4,9 +4,14 @@ import com.aiinterviewplatform.backend.dto.*;
 import com.aiinterviewplatform.backend.entity.User;
 import com.aiinterviewplatform.backend.service.InterviewService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 import java.util.List;
 import java.util.UUID;
@@ -98,5 +103,28 @@ public class InterviewController {
         User user = (User) authentication.getPrincipal();
 
         return interviewService.completeInterview(id, user);
+    }
+
+    @GetMapping("/{id}/result")
+    public InterviewResultResponse getInterviewResult(
+            @PathVariable UUID id,
+            Authentication authentication) {
+
+        User user = (User) authentication.getPrincipal();
+
+        return interviewService.getInterviewResult(id, user);
+    }
+
+    @GetMapping
+    public InterviewHistoryPageResponse getInterviewHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+
+        User user = (User) authentication.getPrincipal();
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return interviewService.getInterviewHistory(user, pageable);
     }
 }

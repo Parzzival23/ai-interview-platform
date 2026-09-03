@@ -7,6 +7,8 @@ import com.aiinterviewplatform.backend.repository.AnswerRepository;
 import com.aiinterviewplatform.backend.repository.InterviewQuestionRepository;
 import com.aiinterviewplatform.backend.repository.InterviewRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -57,7 +59,8 @@ public class InterviewService {
 
         Interview interview = interviewRepository
                 .findByIdAndUser(interviewId, user)
-                .orElseThrow(() -> new InterviewNotFoundException("Interview not found"));
+                .orElseThrow(() ->
+                        new InterviewNotFoundException("Interview not found"));
 
         return new InterviewResponse(
                 interview.getId(),
@@ -69,6 +72,7 @@ public class InterviewService {
                 interview.getCompletedAt()
         );
     }
+
     public InterviewResponse startInterview(UUID interviewId, User user) {
 
         Interview interview = interviewRepository
@@ -96,6 +100,7 @@ public class InterviewService {
                 savedInterview.getCompletedAt()
         );
     }
+
     public List<InterviewQuestionResponse> getInterviewQuestions(
             UUID interviewId,
             User user) {
@@ -118,6 +123,7 @@ public class InterviewService {
                 ))
                 .toList();
     }
+
     public void submitAnswer(
             UUID interviewId,
             UUID questionId,
@@ -168,6 +174,7 @@ public class InterviewService {
             UUID questionId,
             EvaluateAnswerRequest request,
             User user) {
+
         Interview interview = interviewRepository
                 .findByIdAndUser(interviewId, user)
                 .orElseThrow(() ->
@@ -192,6 +199,7 @@ public class InterviewService {
 
         answerRepository.save(answer);
     }
+
     public InterviewResponse completeInterview(UUID interviewId, User user) {
 
         Interview interview = interviewRepository
@@ -200,7 +208,9 @@ public class InterviewService {
                         new InterviewNotFoundException("Interview not found"));
 
         if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
-            throw new InterviewNotInProgressException("Interview is not in progress");
+            throw new InterviewNotInProgressException(
+                    "Interview is not in progress"
+            );
         }
 
         interview.complete();
@@ -215,6 +225,117 @@ public class InterviewService {
                 savedInterview.getCreatedAt(),
                 savedInterview.getStartedAt(),
                 savedInterview.getCompletedAt()
+        );
+    }
+
+    public InterviewResultResponse getInterviewResult(
+            UUID interviewId,
+            User user) {
+
+        Interview interview = interviewRepository
+                .findByIdAndUser(interviewId, user)
+                .orElseThrow(() ->
+                        new InterviewNotFoundException("Interview not found"));
+
+        if (interview.getStatus() != InterviewStatus.COMPLETED) {
+            throw new InterviewNotCompletedException(
+                    "Interview has not been completed"
+            );
+        }
+
+        List<InterviewQuestion> questions =
+                interviewQuestionRepository
+                        .findByInterviewIdOrderByQuestionOrder(interviewId);
+
+        List<InterviewResultQuestionResponse> questionResults =
+                questions.stream()
+                        .map(question -> {
+
+                            Answer answer = answerRepository
+                                    .findByQuestion(question)
+                                    .orElse(null);
+
+                            return new InterviewResultQuestionResponse(
+                                    question.getId(),
+                                    question.getQuestionText(),
+                                    answer != null
+                                            ? answer.getAnswerText()
+                                            : null,
+                                    answer != null
+                                            ? answer.getTimeTaken()
+                                            : null,
+                                    answer != null
+                                            ? answer.getScore()
+                                            : null,
+                                    answer != null
+                                            ? answer.getFeedback()
+                                            : null
+                            );
+                        })
+                        .toList();
+
+        int totalQuestions = questions.size();
+
+        int answeredQuestions = (int) questionResults.stream()
+                .filter(result -> result.answerText() != null)
+                .count();
+
+        double totalScore = questionResults.stream()
+                .filter(result -> result.score() != null)
+                .mapToDouble(InterviewResultQuestionResponse::score)
+                .sum();
+
+        long evaluatedQuestions = questionResults.stream()
+                .filter(result -> result.score() != null)
+                .count();
+
+        double averageScore = evaluatedQuestions > 0
+                ? totalScore / evaluatedQuestions
+                : 0.0;
+
+        return new InterviewResultResponse(
+                interview.getId(),
+                interview.getTopic(),
+                interview.getDifficulty(),
+                interview.getStatus(),
+                totalQuestions,
+                answeredQuestions,
+                totalScore,
+                averageScore,
+                questionResults
+        );
+    }
+
+    public InterviewHistoryPageResponse getInterviewHistory(
+            User user,
+            Pageable pageable) {
+
+        Page<Interview> interviewPage =
+                interviewRepository.findByUserOrderByCreatedAtDesc(
+                        user,
+                        pageable
+                );
+
+        List<InterviewHistoryResponse> interviews =
+                interviewPage.getContent()
+                        .stream()
+                        .map(interview -> new InterviewHistoryResponse(
+                                interview.getId(),
+                                interview.getTopic(),
+                                interview.getDifficulty(),
+                                interview.getStatus(),
+                                interview.getCreatedAt(),
+                                interview.getStartedAt(),
+                                interview.getCompletedAt()
+                        ))
+                        .toList();
+
+        return new InterviewHistoryPageResponse(
+                interviews,
+                interviewPage.getNumber(),
+                interviewPage.getSize(),
+                interviewPage.getTotalElements(),
+                interviewPage.getTotalPages()
         );
     }
 }

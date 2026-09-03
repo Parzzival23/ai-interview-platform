@@ -74,4 +74,13 @@ public class GlobalExceptionHandler {
                 .body(ex.getMessage());
     }
 
+    @ExceptionHandler(InterviewNotCompletedException.class)
+    public ResponseEntity<String> handleInterviewNotCompleted(
+            InterviewNotCompletedException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ex.getMessage());
+    }
+
 }
