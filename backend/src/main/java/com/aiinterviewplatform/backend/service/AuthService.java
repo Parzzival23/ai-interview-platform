@@ -2,6 +2,7 @@ package com.aiinterviewplatform.backend.service;
 
 import com.aiinterviewplatform.backend.dto.LoginRequest;
 import com.aiinterviewplatform.backend.entity.User;
+import com.aiinterviewplatform.backend.exception.EmailAlreadyExistsException;
 import com.aiinterviewplatform.backend.exception.InvalidCredentialsException;
 import com.aiinterviewplatform.backend.repository.UserRepository;
 import com.aiinterviewplatform.backend.dto.RegisterRequest;
@@ -23,7 +24,7 @@ public class AuthService {
     }
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email already registered");
+            throw new EmailAlreadyExistsException("Email already registered");
         }
         String hashedPassword = passwordEncoder.encode(request.password());
         User user = new User(

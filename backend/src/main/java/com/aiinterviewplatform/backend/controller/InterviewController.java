@@ -4,9 +4,12 @@ import com.aiinterviewplatform.backend.dto.*;
 import com.aiinterviewplatform.backend.entity.User;
 import com.aiinterviewplatform.backend.service.InterviewService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
@@ -18,6 +21,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/interviews")
+@Validated
 public class InterviewController {
 
     private final InterviewService interviewService;
@@ -117,8 +121,14 @@ public class InterviewController {
 
     @GetMapping
     public InterviewHistoryPageResponse getInterviewHistory(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "0")
+            @Min(0)
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            @Min(1)
+            @Max(50)
+            int size,
             Authentication authentication) {
 
         User user = (User) authentication.getPrincipal();

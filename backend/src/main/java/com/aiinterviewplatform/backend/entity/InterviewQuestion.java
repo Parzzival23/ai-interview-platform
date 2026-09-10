@@ -5,7 +5,15 @@ import jakarta.persistence.*;
 import java.util.UUID;
 
 @Entity
-@Table(name="interview_questions")
+@Table(
+        name = "interview_questions",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_question_interview_order",
+                        columnNames = {"interview_id", "question_order"}
+                )
+        }
+)
 public class InterviewQuestion {
 
     @Id

@@ -72,7 +72,7 @@ public class InterviewService {
                 interview.getCompletedAt()
         );
     }
-
+    @Transactional
     public InterviewResponse startInterview(UUID interviewId, User user) {
 
         Interview interview = interviewRepository
@@ -123,7 +123,7 @@ public class InterviewService {
                 ))
                 .toList();
     }
-
+    @Transactional
     public void submitAnswer(
             UUID interviewId,
             UUID questionId,
@@ -138,7 +138,7 @@ public class InterviewService {
 
         // 2. Interview must be in progress
         if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Interview is not in progress");
+            throw new InterviewNotInProgressException("Interview is not in progress");
         }
 
         // 3. Find the question
@@ -180,6 +180,12 @@ public class InterviewService {
                 .orElseThrow(() ->
                         new InterviewNotFoundException("Interview not found"));
 
+        if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
+            throw new InterviewNotInProgressException(
+                    "Interview is not in progress"
+            );
+        }
+
         InterviewQuestion question = interviewQuestionRepository
                 .findById(questionId)
                 .orElseThrow(() ->
@@ -199,7 +205,7 @@ public class InterviewService {
 
         answerRepository.save(answer);
     }
-
+    @Transactional
     public InterviewResponse completeInterview(UUID interviewId, User user) {
 
         Interview interview = interviewRepository
@@ -210,6 +216,22 @@ public class InterviewService {
         if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
             throw new InterviewNotInProgressException(
                     "Interview is not in progress"
+            );
+        }
+
+        List<InterviewQuestion> questions =
+                interviewQuestionRepository
+                        .findByInterviewIdOrderByQuestionOrder(interviewId);
+
+        long answeredQuestions = questions.stream()
+                .filter(question ->
+                        answerRepository.findByQuestion(question).isPresent()
+                )
+                .count();
+
+        if (questions.isEmpty() || answeredQuestions < questions.size()) {
+            throw new IncompleteInterviewException(
+                    "All questions must be answered before completing the interview"
             );
         }
 
