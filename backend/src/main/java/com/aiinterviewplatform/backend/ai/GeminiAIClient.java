@@ -1,27 +1,42 @@
 package com.aiinterviewplatform.backend.ai;
 
+import com.aiinterviewplatform.backend.dto.GeneratedQuestions;
+import com.aiinterviewplatform.backend.entity.Difficulty;
+import com.aiinterviewplatform.backend.entity.QuestionType;
+import com.aiinterviewplatform.backend.exception.AIResponseParsingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
-import com.google.genai.types.GenerateContentResponse;
-import org.springframework.beans.factory.annotation.Value;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.Set;
 
 @Component
 public class GeminiAIClient {
 
-    private final Client client;
+    private final ObjectMapper objectMapper;
+    private final Validator validator;
+    private final GeminiApi geminiApi;
 
     public GeminiAIClient(
-            @Value("${gemini.api-key}") String apiKey
+            ObjectMapper objectMapper,
+            Validator validator,
+            GeminiApi geminiApi
     ) {
-        this.client = Client.builder()
-                .apiKey(apiKey)
-                .build();
+        this.objectMapper = objectMapper;
+        this.validator = validator;
+        this.geminiApi = geminiApi;
     }
 
-    public String testStructuredOutput() {
+    public GeneratedQuestions generateQuestions(
+            String topic,
+            Difficulty difficulty,
+            int numberOfQuestions
+    ) {
 
         ImmutableMap<String, Object> schema = ImmutableMap.of(
                 "type", "object",
@@ -61,22 +76,102 @@ public class GeminiAIClient {
                         .responseJsonSchema(schema)
                         .build();
 
-        GenerateContentResponse response =
-                client.models.generateContent(
-                        "gemini-3.6-flash",
-                        """
-                        You are an expert technical interviewer.
+        String prompt = """
+                You are an expert technical interviewer.
 
-                        Generate exactly 2 technical interview questions about Java
-                        at medium difficulty.
+                Generate exactly %d technical interview questions about %s
+                at %s difficulty.
 
-                        Do not provide answers.
-                        Do not provide explanations.
-                        Return only the requested structured response.
-                        """,
+                Do not provide answers.
+                Do not provide explanations.
+                Return only the requested structured response.
+                """.formatted(
+                numberOfQuestions,
+                topic,
+                difficulty
+        );
+
+        String responseText =
+                geminiApi.generateContent(
+                        prompt,
                         config
                 );
 
-        return response.text();
+        try {
+            GeneratedQuestions generatedQuestions =
+                    objectMapper.readValue(
+                            responseText,
+                            GeneratedQuestions.class
+                    );
+
+            // Structural validation
+            Set<ConstraintViolation<GeneratedQuestions>> violations =
+                    validator.validate(generatedQuestions);
+
+            if (!violations.isEmpty()) {
+                throw new AIResponseParsingException(
+                        "AI-generated questions failed structural validation"
+                );
+            }
+
+            // Business validation
+            validateBusinessRules(
+                    generatedQuestions,
+                    numberOfQuestions
+            );
+
+            return generatedQuestions;
+
+        } catch (JacksonException e) {
+            throw new AIResponseParsingException(
+                    "Failed to parse AI-generated questions",
+                    e
+            );
+        }
+    }
+
+    private void validateBusinessRules(
+            GeneratedQuestions generatedQuestions,
+            int expectedQuestionCount
+    ) {
+
+        // Rule 1: Exact question count
+        if (generatedQuestions.getQuestions().size()
+                != expectedQuestionCount) {
+
+            throw new AIResponseParsingException(
+                    "AI generated an incorrect number of questions"
+            );
+        }
+
+        // Rule 2: Every question must be technical
+        boolean hasNonTechnicalQuestion =
+                generatedQuestions.getQuestions().stream()
+                        .anyMatch(question ->
+                                question.getQuestionType()
+                                        != QuestionType.TECHNICAL
+                        );
+
+        if (hasNonTechnicalQuestion) {
+            throw new AIResponseParsingException(
+                    "AI generated a non-technical question"
+            );
+        }
+
+        // Rule 3: No duplicate questions
+        long uniqueQuestionCount =
+                generatedQuestions.getQuestions().stream()
+                        .map(question ->
+                                question.getQuestionText().trim()
+                        )
+                        .map(String::toLowerCase)
+                        .distinct()
+                        .count();
+
+        if (uniqueQuestionCount != expectedQuestionCount) {
+            throw new AIResponseParsingException(
+                    "AI generated duplicate questions"
+            );
+        }
     }
 }

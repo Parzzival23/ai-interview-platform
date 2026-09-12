@@ -3,6 +3,7 @@ package com.aiinterviewplatform.backend.exception;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -107,6 +108,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ex.getMessage());
+    }
+    @ExceptionHandler(AIResponseParsingException.class)
+    public ResponseEntity<String> handleAIResponseParsing(
+            AIResponseParsingException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to process AI-generated questions");
     }
 
 }
