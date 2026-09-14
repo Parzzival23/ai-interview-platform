@@ -20,15 +20,21 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final InterviewQuestionRepository interviewQuestionRepository;
     private final AnswerRepository answerRepository;
+    private final QuestionGenerationService questionGenerationService;
+    private final InterviewPersistenceService interviewPersistenceService;
 
     public InterviewService(
             InterviewRepository interviewRepository,
             InterviewQuestionRepository interviewQuestionRepository,
-            AnswerRepository answerRepository) {
+            AnswerRepository answerRepository,
+            QuestionGenerationService questionGenerationService,
+            InterviewPersistenceService interviewPersistenceService) {
 
         this.interviewRepository = interviewRepository;
         this.interviewQuestionRepository = interviewQuestionRepository;
         this.answerRepository = answerRepository;
+        this.questionGenerationService = questionGenerationService;
+        this.interviewPersistenceService = interviewPersistenceService;
     }
 
     public InterviewResponse createInterview(
@@ -39,16 +45,28 @@ public class InterviewService {
         Interview interview = new Interview(
                 user,
                 request.topic(),
-                request.difficulty()
+                request.difficulty(),
+                request.numberOfQuestions()
         );
 
-        Interview savedInterview = interviewRepository.save(interview);
+        List<InterviewQuestion> questions =
+                questionGenerationService.generateQuestions(
+                        interview,
+                        request.numberOfQuestions()
+                );
+
+        Interview savedInterview =
+                interviewPersistenceService.saveInterviewWithQuestions(
+                        interview,
+                        questions
+                );
 
         return new InterviewResponse(
                 savedInterview.getId(),
                 savedInterview.getTopic(),
                 savedInterview.getDifficulty(),
                 savedInterview.getStatus(),
+                savedInterview.getNumberOfQuestions(),
                 savedInterview.getCreatedAt(),
                 savedInterview.getStartedAt(),
                 savedInterview.getCompletedAt()
@@ -67,6 +85,7 @@ public class InterviewService {
                 interview.getTopic(),
                 interview.getDifficulty(),
                 interview.getStatus(),
+                interview.getNumberOfQuestions(),
                 interview.getCreatedAt(),
                 interview.getStartedAt(),
                 interview.getCompletedAt()
@@ -95,6 +114,7 @@ public class InterviewService {
                 savedInterview.getTopic(),
                 savedInterview.getDifficulty(),
                 savedInterview.getStatus(),
+                savedInterview.getNumberOfQuestions(),
                 savedInterview.getCreatedAt(),
                 savedInterview.getStartedAt(),
                 savedInterview.getCompletedAt()
@@ -244,6 +264,7 @@ public class InterviewService {
                 savedInterview.getTopic(),
                 savedInterview.getDifficulty(),
                 savedInterview.getStatus(),
+                savedInterview.getNumberOfQuestions(),
                 savedInterview.getCreatedAt(),
                 savedInterview.getStartedAt(),
                 savedInterview.getCompletedAt()

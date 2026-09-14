@@ -11,6 +11,7 @@ UUID id,
 String topic,
 Difficulty difficulty,
 InterviewStatus status,
+Integer numberOfQuestions,
 Instant createdAt,
 Instant startedAt,
 Instant completedAt

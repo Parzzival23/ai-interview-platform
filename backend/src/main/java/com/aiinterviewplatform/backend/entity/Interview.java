@@ -30,6 +30,9 @@ public class Interview {
     @Column(nullable = false)
     private Difficulty difficulty;
 
+    @Column(nullable = false)
+    private Integer numberOfQuestions;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private InterviewStatus status;
@@ -110,12 +113,25 @@ public class Interview {
         this.completedAt = completedAt;
     }
 
+    public Integer getNumberOfQuestions() {
+        return numberOfQuestions;
+    }
+
+    public void setNumberOfQuestions(Integer numberOfQuestions) {
+        this.numberOfQuestions = numberOfQuestions;
+    }
 
 
-    public Interview(User user, String topic, Difficulty difficulty) {
+    public Interview(
+            User user,
+            String topic,
+            Difficulty difficulty,
+            Integer numberOfQuestions
+    ) {
         this.user = user;
         this.topic = topic;
         this.difficulty = difficulty;
+        this.numberOfQuestions = numberOfQuestions;
         this.status = InterviewStatus.NOT_STARTED;
     }
 }
