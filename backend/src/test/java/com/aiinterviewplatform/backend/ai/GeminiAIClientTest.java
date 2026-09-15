@@ -1,5 +1,6 @@
 package com.aiinterviewplatform.backend.ai;
 
+import com.aiinterviewplatform.backend.dto.GeneratedEvaluation;
 import com.aiinterviewplatform.backend.dto.GeneratedQuestions;
 import com.aiinterviewplatform.backend.entity.Difficulty;
 import com.aiinterviewplatform.backend.entity.QuestionType;
@@ -19,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class GeminiAIClientTest {
@@ -65,7 +66,7 @@ class GeminiAIClientTest {
                 """;
 
         // Tell the mock what to return instead of calling Gemini.
-        org.mockito.Mockito.when(
+        when(
                 geminiApi.generateContent(
                         anyString(),
                         any(GenerateContentConfig.class)
@@ -113,7 +114,7 @@ class GeminiAIClientTest {
             }
             """;
 
-        org.mockito.Mockito.when(
+        when(
                 geminiApi.generateContent(
                         anyString(),
                         any(GenerateContentConfig.class)
@@ -146,7 +147,7 @@ class GeminiAIClientTest {
             }
             """;
 
-        org.mockito.Mockito.when(
+        when(
                 geminiApi.generateContent(
                         anyString(),
                         any(GenerateContentConfig.class)
@@ -179,7 +180,7 @@ class GeminiAIClientTest {
             }
             """;
 
-        org.mockito.Mockito.when(
+        when(
                 geminiApi.generateContent(
                         anyString(),
                         any(GenerateContentConfig.class)
@@ -206,7 +207,7 @@ class GeminiAIClientTest {
                 }
             """;
 
-        org.mockito.Mockito.when(
+        when(
                 geminiApi.generateContent(
                         anyString(),
                         any(GenerateContentConfig.class)
@@ -218,6 +219,127 @@ class GeminiAIClientTest {
                         "Java",
                         Difficulty.MEDIUM,
                         2
+                )
+        ).isInstanceOf(AIResponseParsingException.class);
+    }
+
+    @Test
+    void evaluateAnswerShouldReturnValidEvaluation() {
+        String responseJson = """
+            {
+              "score": 8.0,
+              "feedback": "The answer correctly explains the core concept."
+            }
+            """;
+
+        when(geminiApi.generateContent(anyString(), any()))
+                .thenReturn(responseJson);
+
+        GeneratedEvaluation result =
+                geminiAIClient.evaluateAnswer(
+                        "Explain polymorphism in Java.",
+                        "Polymorphism allows the same interface to have different implementations."
+                );
+
+        assertThat(result).isNotNull();
+        assertThat(result.getScore()).isEqualTo(8.0);
+        assertThat(result.getFeedback())
+                .isEqualTo("The answer correctly explains the core concept.");
+
+        verify(geminiApi, times(1))
+                .generateContent(anyString(), any());
+    }
+    @Test
+    void evaluateAnswerShouldRejectScoreBelowZero() {
+        String responseJson = """
+            {
+              "score": -1.0,
+              "feedback": "Invalid score."
+            }
+            """;
+
+        when(geminiApi.generateContent(anyString(), any()))
+                .thenReturn(responseJson);
+
+        assertThatThrownBy(() ->
+                geminiAIClient.evaluateAnswer(
+                        "Explain polymorphism in Java.",
+                        "Some answer."
+                )
+        ).isInstanceOf(AIResponseParsingException.class);
+    }
+    @Test
+    void evaluateAnswerShouldRejectScoreAboveTen() {
+        String responseJson = """
+            {
+              "score": 11.0,
+              "feedback": "Invalid score."
+            }
+            """;
+
+        when(geminiApi.generateContent(anyString(), any()))
+                .thenReturn(responseJson);
+
+        assertThatThrownBy(() ->
+                geminiAIClient.evaluateAnswer(
+                        "Explain polymorphism in Java.",
+                        "Some answer."
+                )
+        ).isInstanceOf(AIResponseParsingException.class);
+    }
+    @Test
+    void evaluateAnswerShouldRejectBlankFeedback() {
+        String responseJson = """
+            {
+              "score": 8.0,
+              "feedback": "   "
+            }
+            """;
+
+        when(geminiApi.generateContent(anyString(), any()))
+                .thenReturn(responseJson);
+
+        assertThatThrownBy(() ->
+                geminiAIClient.evaluateAnswer(
+                        "Explain polymorphism in Java.",
+                        "Some answer."
+                )
+        ).isInstanceOf(AIResponseParsingException.class);
+    }
+    @Test
+    void evaluateAnswerShouldRejectMalformedJson() {
+        String responseJson = """
+            {
+              "score": 8.0,
+              "feedback":
+            """;
+
+        when(geminiApi.generateContent(anyString(), any()))
+                .thenReturn(responseJson);
+
+        assertThatThrownBy(() ->
+                geminiAIClient.evaluateAnswer(
+                        "Explain polymorphism in Java.",
+                        "Some answer."
+                )
+        ).isInstanceOf(AIResponseParsingException.class);
+    }
+    @Test
+    void evaluateAnswerShouldRejectNullScore() {
+        String responseJson = """
+            {
+              "score": null,
+              "feedback": "The answer is reasonable."
+            }
+            """;
+
+        when(geminiApi.generateContent(anyString(), any()))
+                .thenReturn(responseJson);
+
+        assertThatThrownBy(() ->
+                geminiAIClient.evaluateAnswer(
+                        "Explain polymorphism in Java.",
+                        "Some answer."
                 )
         ).isInstanceOf(AIResponseParsingException.class);
     }

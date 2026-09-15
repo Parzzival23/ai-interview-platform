@@ -22,25 +22,30 @@ public class InterviewService {
     private final AnswerRepository answerRepository;
     private final QuestionGenerationService questionGenerationService;
     private final InterviewPersistenceService interviewPersistenceService;
+    private final AnswerPersistenceService answerPersistenceService;
+    private final AnswerEvaluationService answerEvaluationService;
 
     public InterviewService(
             InterviewRepository interviewRepository,
             InterviewQuestionRepository interviewQuestionRepository,
             AnswerRepository answerRepository,
             QuestionGenerationService questionGenerationService,
-            InterviewPersistenceService interviewPersistenceService) {
+            InterviewPersistenceService interviewPersistenceService,
+            AnswerPersistenceService answerPersistenceService,
+            AnswerEvaluationService answerEvaluationService) {
 
         this.interviewRepository = interviewRepository;
         this.interviewQuestionRepository = interviewQuestionRepository;
         this.answerRepository = answerRepository;
         this.questionGenerationService = questionGenerationService;
         this.interviewPersistenceService = interviewPersistenceService;
+        this.answerPersistenceService = answerPersistenceService;
+        this.answerEvaluationService = answerEvaluationService;
     }
 
     public InterviewResponse createInterview(
             CreateInterviewRequest request,
-            User user
-    ) {
+            User user) {
 
         Interview interview = new Interview(
                 user,
@@ -91,6 +96,7 @@ public class InterviewService {
                 interview.getCompletedAt()
         );
     }
+
     @Transactional
     public InterviewResponse startInterview(UUID interviewId, User user) {
 
@@ -143,7 +149,7 @@ public class InterviewService {
                 ))
                 .toList();
     }
-    @Transactional
+
     public void submitAnswer(
             UUID interviewId,
             UUID questionId,
@@ -158,7 +164,9 @@ public class InterviewService {
 
         // 2. Interview must be in progress
         if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
-            throw new InterviewNotInProgressException("Interview is not in progress");
+            throw new InterviewNotInProgressException(
+                    "Interview is not in progress"
+            );
         }
 
         // 3. Find the question
@@ -179,54 +187,36 @@ public class InterviewService {
             );
         }
 
-        // 6. Create and save the answer
+        // 6. Create the answer
         Answer answer = new Answer();
         answer.setQuestion(question);
         answer.setAnswerText(request.answerText());
         answer.setTimeTaken(request.timeTaken());
 
-        answerRepository.save(answer);
+        // 7. Persist the answer first
+        //    This transaction commits before AI evaluation starts.
+        Answer savedAnswer =
+                answerPersistenceService.saveAnswer(answer);
+
+        // 8. Evaluate the answer using AI
+        GeneratedEvaluation evaluation =
+                answerEvaluationService.evaluateAnswer(
+                        question,
+                        savedAnswer.getAnswerText()
+                );
+
+        // 9. Persist the AI evaluation separately
+        answerPersistenceService.saveEvaluation(
+                savedAnswer,
+                evaluation
+        );
     }
 
+
     @Transactional
-    public void evaluateAnswer(
+    public InterviewResponse completeInterview(
             UUID interviewId,
-            UUID questionId,
-            EvaluateAnswerRequest request,
             User user) {
-
-        Interview interview = interviewRepository
-                .findByIdAndUser(interviewId, user)
-                .orElseThrow(() ->
-                        new InterviewNotFoundException("Interview not found"));
-
-        if (interview.getStatus() != InterviewStatus.IN_PROGRESS) {
-            throw new InterviewNotInProgressException(
-                    "Interview is not in progress"
-            );
-        }
-
-        InterviewQuestion question = interviewQuestionRepository
-                .findById(questionId)
-                .orElseThrow(() ->
-                        new QuestionNotFoundException("Question not found"));
-
-        if (!question.getInterview().getId().equals(interview.getId())) {
-            throw new InterviewNotFoundException("Question not found");
-        }
-
-        Answer answer = answerRepository
-                .findByQuestion(question)
-                .orElseThrow(() ->
-                        new AnswerNotFoundException("Answer not found"));
-
-        answer.setScore(request.score());
-        answer.setFeedback(request.feedback());
-
-        answerRepository.save(answer);
-    }
-    @Transactional
-    public InterviewResponse completeInterview(UUID interviewId, User user) {
 
         Interview interview = interviewRepository
                 .findByIdAndUser(interviewId, user)

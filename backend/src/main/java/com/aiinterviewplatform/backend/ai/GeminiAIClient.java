@@ -1,5 +1,6 @@
 package com.aiinterviewplatform.backend.ai;
 
+import com.aiinterviewplatform.backend.dto.GeneratedEvaluation;
 import com.aiinterviewplatform.backend.dto.GeneratedQuestions;
 import com.aiinterviewplatform.backend.entity.Difficulty;
 import com.aiinterviewplatform.backend.entity.QuestionType;
@@ -171,6 +172,91 @@ public class GeminiAIClient {
         if (uniqueQuestionCount != expectedQuestionCount) {
             throw new AIResponseParsingException(
                     "AI generated duplicate questions"
+            );
+        }
+    }
+    public GeneratedEvaluation evaluateAnswer(
+            String question,
+            String answer
+    ) {
+        String prompt = """
+            Evaluate the candidate's answer to the interview question.
+
+            Question:
+            %s
+
+            Candidate answer:
+            %s
+
+            Evaluate the answer based on:
+            - correctness
+            - relevance
+            - completeness
+            - clarity
+
+            Give a score from 0 to 10.
+
+            Return ONLY valid JSON matching this structure:
+            {
+              "score": 0.0,
+              "feedback": "..."
+            }
+
+            Do not include any additional fields.
+            Do not include explanations outside the JSON.
+            """.formatted(question, answer);
+
+        ImmutableMap<String, Object> schema = ImmutableMap.of(
+                "type", "object",
+                "properties", ImmutableMap.of(
+                        "score", ImmutableMap.of(
+                                "type", "number"
+                        ),
+                        "feedback", ImmutableMap.of(
+                                "type", "string"
+                        )
+                ),
+                "required", ImmutableList.of(
+                        "score",
+                        "feedback"
+                )
+        );
+
+        GenerateContentConfig config =
+                GenerateContentConfig.builder()
+                        .responseMimeType("application/json")
+                        .candidateCount(1)
+                        .responseJsonSchema(schema)
+                        .build();
+
+        String responseText =
+                geminiApi.generateContent(
+                        prompt,
+                        config
+                );
+
+        try {
+            GeneratedEvaluation evaluation =
+                    objectMapper.readValue(
+                            responseText,
+                            GeneratedEvaluation.class
+                    );
+
+            Set<ConstraintViolation<GeneratedEvaluation>> violations =
+                    validator.validate(evaluation);
+
+            if (!violations.isEmpty()) {
+                throw new AIResponseParsingException(
+                        "AI-generated evaluation failed structural validation"
+                );
+            }
+
+            return evaluation;
+
+        } catch (JacksonException e) {
+            throw new AIResponseParsingException(
+                    "Failed to parse AI-generated evaluation",
+                    e
             );
         }
     }

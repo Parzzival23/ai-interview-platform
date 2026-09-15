@@ -7,14 +7,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.RequestParam;
-
 
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +37,7 @@ public class InterviewController {
 
         return interviewService.createInterview(request, user);
     }
+
     @GetMapping("/{id}")
     public InterviewResponse getInterview(
             @PathVariable UUID id,
@@ -49,31 +47,34 @@ public class InterviewController {
 
         return interviewService.getInterview(id, user);
     }
+
     @PostMapping("/{id}/start")
     public InterviewResponse startInterview(
             @PathVariable UUID id,
-            Authentication authentication) {
-
+            Authentication authentication
+    ) {
         User user = (User) authentication.getPrincipal();
 
         return interviewService.startInterview(id, user);
     }
+
     @GetMapping("/{id}/questions")
     public List<InterviewQuestionResponse> getInterviewQuestions(
             @PathVariable UUID id,
-            Authentication authentication) {
-
+            Authentication authentication
+    ) {
         User user = (User) authentication.getPrincipal();
 
         return interviewService.getInterviewQuestions(id, user);
     }
+
     @PostMapping("/{interviewId}/questions/{questionId}/answer")
     public void submitAnswer(
             @PathVariable UUID interviewId,
             @PathVariable UUID questionId,
             @Valid @RequestBody SubmitAnswerRequest request,
-            Authentication authentication) {
-
+            Authentication authentication
+    ) {
         User user = (User) authentication.getPrincipal();
 
         interviewService.submitAnswer(
@@ -83,27 +84,12 @@ public class InterviewController {
                 user
         );
     }
-    @PostMapping("/{interviewId}/questions/{questionId}/evaluate")
-    public void evaluateAnswer(
-            @PathVariable UUID interviewId,
-            @PathVariable UUID questionId,
-            @Valid @RequestBody EvaluateAnswerRequest request,
-            Authentication authentication) {
 
-        User user = (User) authentication.getPrincipal();
-
-        interviewService.evaluateAnswer(
-                interviewId,
-                questionId,
-                request,
-                user
-        );
-    }
     @PostMapping("/{id}/complete")
     public InterviewResponse completeInterview(
             @PathVariable UUID id,
-            Authentication authentication) {
-
+            Authentication authentication
+    ) {
         User user = (User) authentication.getPrincipal();
 
         return interviewService.completeInterview(id, user);
@@ -112,8 +98,8 @@ public class InterviewController {
     @GetMapping("/{id}/result")
     public InterviewResultResponse getInterviewResult(
             @PathVariable UUID id,
-            Authentication authentication) {
-
+            Authentication authentication
+    ) {
         User user = (User) authentication.getPrincipal();
 
         return interviewService.getInterviewResult(id, user);
@@ -129,8 +115,9 @@ public class InterviewController {
             @Min(1)
             @Max(50)
             int size,
-            Authentication authentication) {
 
+            Authentication authentication
+    ) {
         User user = (User) authentication.getPrincipal();
 
         Pageable pageable = PageRequest.of(page, size);
