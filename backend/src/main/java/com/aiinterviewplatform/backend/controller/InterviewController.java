@@ -69,7 +69,7 @@ public class InterviewController {
     }
 
     @PostMapping("/{interviewId}/questions/{questionId}/answer")
-    public void submitAnswer(
+    public AnswerEvaluationResponse submitAnswer(
             @PathVariable UUID interviewId,
             @PathVariable UUID questionId,
             @Valid @RequestBody SubmitAnswerRequest request,
@@ -77,11 +77,16 @@ public class InterviewController {
     ) {
         User user = (User) authentication.getPrincipal();
 
-        interviewService.submitAnswer(
+        GeneratedEvaluation evaluation = interviewService.submitAnswer(
                 interviewId,
                 questionId,
                 request,
                 user
+        );
+
+        return new AnswerEvaluationResponse(
+                evaluation.getScore(),
+                evaluation.getFeedback()
         );
     }
 

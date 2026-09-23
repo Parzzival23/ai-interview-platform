@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -150,7 +151,7 @@ public class InterviewService {
                 .toList();
     }
 
-    public void submitAnswer(
+    public GeneratedEvaluation submitAnswer(
             UUID interviewId,
             UUID questionId,
             SubmitAnswerRequest request,
@@ -180,13 +181,36 @@ public class InterviewService {
             throw new InterviewNotFoundException("Question not found");
         }
 
-        // 5. Prevent answering the same question twice
-        if (answerRepository.findByQuestion(question).isPresent()) {
-            throw new AnswerAlreadySubmittedException(
-                    "Question already answered"
+        // 5. Check for existing answer
+        Optional<Answer> existingAnswerOpt =
+                answerRepository.findByQuestion(question);
+
+        if (existingAnswerOpt.isPresent()) {
+            Answer existingAnswer = existingAnswerOpt.get();
+
+            // Case B: Already evaluated → reject
+            if (existingAnswer.getScore() != null) {
+                throw new AnswerAlreadySubmittedException(
+                        "Question already answered"
+                );
+            }
+
+            // Case C: Unevaluated → retry AI evaluation
+            GeneratedEvaluation evaluation =
+                    answerEvaluationService.evaluateAnswer(
+                            question,
+                            existingAnswer.getAnswerText()
+                    );
+
+            answerPersistenceService.saveEvaluation(
+                    existingAnswer,
+                    evaluation
             );
+
+            return evaluation;
         }
 
+        // Case A: New answer
         // 6. Create the answer
         Answer answer = new Answer();
         answer.setQuestion(question);
@@ -210,6 +234,8 @@ public class InterviewService {
                 savedAnswer,
                 evaluation
         );
+
+        return evaluation;
     }
 
 

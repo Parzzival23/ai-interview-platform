@@ -115,7 +115,16 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Failed to process AI-generated questions");
+                .body("Failed to process AI response");
+    }
+
+    @ExceptionHandler(AIProviderException.class)
+    public ResponseEntity<String> handleAIProvider(
+            AIProviderException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body("AI service is temporarily unavailable");
     }
 
 }

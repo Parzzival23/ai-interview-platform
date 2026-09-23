@@ -1,5 +1,6 @@
 package com.aiinterviewplatform.backend.ai;
 
+import com.aiinterviewplatform.backend.exception.AIProviderException;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
@@ -24,13 +25,20 @@ public class GeminiApiImpl implements GeminiApi {
             String prompt,
             GenerateContentConfig config
     ) {
-        GenerateContentResponse response =
-                client.models.generateContent(
-                        "gemini-3.6-flash",
-                        prompt,
-                        config
-                );
+        try {
+            GenerateContentResponse response =
+                    client.models.generateContent(
+                            "gemini-3.6-flash",
+                            prompt,
+                            config
+                    );
 
-        return response.text();
+            return response.text();
+        } catch (Exception e) {
+            throw new AIProviderException(
+                    "Gemini API call failed",
+                    e
+            );
+        }
     }
 }
